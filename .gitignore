@@ -1,0 +1,9 @@
+# 秘密情報
+.env
+servise-sccount.json
+
+# Python のキャッシュ
+__pycache__/
+
+# Node.js を使っている場合
+node_modules/
