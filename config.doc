@@ -1,0 +1,118 @@
+Discord Remind Bot POC
+要件定義書＋基本設計書（ドラフト）
+
+1. 背景・目的
+- Discord 上で完結したリマインド／タスク管理を提供しつつ、裏側で Web 管理画面と Google（Calendar/Tasks）と同期する。
+- Discord の投稿が流れても、Web で整理された一覧を確認できる。
+- 将来は Slack など他インターフェースも同一バックエンドに接続できる拡張性を持つ。
+
+2. スコープ
+- 本 POC でカバー：Discord Bot、Firestore への保存、Google Calendar 連携、簡易 Web 管理 UI、リマインド通知。
+- 後続拡張（本ドキュメントでは設計方針のみ）：Google Tasks 双方向同期、Gmail API による案内メール、自動自然言語日時解析強化、Web からの編集/追加。
+
+3. 用語
+- TODO：締切付きタスク（例：明日13時までの資料作成）。
+- イベント：予定寄りのタスク（例：12/25 18:00 クリスマスパーティ）。
+- リマインド：開始や期限の○分/○時間前に送る通知。
+- 管理 UI：Web ベースの一覧・参照画面（将来的に編集も）。
+
+4. 全体コンセプト
+- Discord で文章を投げると、Bot と Web サイトと Google（カレンダー＆ToDo）が同期し、リマインドまで行う。
+- 中央は Web + API + DB（Firestore）。Discord/Google などの各チャネルがぶら下がる構成。
+
+5. ユースケース（代表）
+- Discord で「明日の13時に資料作成 30分前に教えて」を入力 → タスク名/日時/リマインドを解析 → DB 保存 → 連携 ON なら Google ToDo/Calendar 登録 → 30分前に Discord 通知。
+- Discord で「12/25 18時から クリスマスパーティ 1時間前に教えて」を入力 → イベントとして保存 → Calendar に予定 → 1 時間前に通知。
+- Web 管理画面で「誰がどのタスク/イベントを追加したか」を一覧・詳細表示。
+-（将来）Google 側変更を定期同期し、Discord/管理画面に反映。
+
+6. 機能要件
+6-1. 共通
+- 文章解析で TODO/イベントを判定し、タイトル・開始/期限日時・リマインドタイミングを抽出。
+- Firestore へ保存し、ユーザー ID/サーバー ID と紐づけ。
+- Google 連携設定が有効なら即時登録（ToDo or Calendar）。
+- リマインド時刻に Discord 通知（DM またはチャンネル、優先は個別 DM）。
+
+6-2. TODO（締切タスク）
+- 入力例：「明日の13時に資料作成 30分前に教えて」
+- 抽出：タスク名、期限日時、リマインド（相対時間）。
+- 機能：追加、一覧（自分／サーバー全体※権限要）、編集、削除、リマインド通知。
+- 外部連携：Google Tasks または Calendar 終日予定で登録（設定により選択）。
+
+6-3. イベント
+- 入力例：「12/25 18時から クリスマスパーティ 1時間前に教えて」
+- 抽出：イベント名、開始日時、リマインド（相対時間）。
+- 機能：追加、一覧、編集、削除、開始前リマインド。
+- 外部連携：Google Calendar イベント登録。将来は Google 側変更の取り込み。
+- メール送信（拡張）：Gmail API で案内メール自動生成（優先度低）。
+
+6-4. Web 管理 UI
+- ログイン（管理者用。将来 Discord OAuth 連携）。
+- 一覧：ユーザー別、サーバー別、種別（TODO/イベント）。
+- 詳細：追加者、追加/更新日時、リマインド設定、Google 連携状態。
+- 将来：Web から追加/編集/削除、Google 双方向同期の状態表示。
+
+6-5. Discord UI フロー
+- ホーム（/remind コマンド）：新規入力、編集、一覧、削除のボタン表示。
+- 新規入力：Bot が「ご用件を入力してください」→ 文章入力 → 解析 → 保存/連携 → 完了メッセージと「追加入力」「ホーム」ボタン。
+
+7. 非機能要件（POC 基準）
+- 可用性：開発/検証用途。商用は想定せず、障害時は手動復旧。
+- 性能：同時数十ユーザー規模。通知遅延は ±数分を許容。
+- セキュリティ：トークン/鍵は .env と firebase-key.json に分離し Git 管理外。管理 UI は認証必須。
+- 運用：Cloud Scheduler で同期/リマインドジョブを定期実行。ログは GCP（Cloud Logging）へ。バックアップ要件は POC では簡易。
+
+8. 外部サービス連携
+- Discord：Slash Command（/remind）。Bot トークン/クライアント ID は .env で管理。
+- Firestore：コレクション `remind_logs`（例）。ユーザー ID、サーバー ID、種別、タイトル、開始/期限、リマインド時刻、ステータス、外部連携 ID 等を保持。
+- Google Calendar：予定登録。サービスアカウントをカレンダーに「予定の変更」権限で追加。カレンダー ID を .env に設定。
+- Google Tasks（将来）：TODO をタスクリストに登録・更新。
+- Gmail（拡張）：イベント案内メール自動生成・送信。
+
+9. データ構造（例：Firestore ドキュメント）
+- users（検討中）：Discord ユーザー設定や連携状態。
+- remind_logs：
+  - id: string
+  - userId: string
+  - guildId: string
+  - type: "todo" | "event"
+  - title: string
+  - startAt: timestamp|null     // イベント開始 or タスク期限
+  - remindAt: timestamp|null    // リマインド時刻
+  - remindOffsetMinutes: number // 30, 60 など
+  - rawText: string             // 元入力
+  - googleCalendarId?: string
+  - googleTaskId?: string
+  - status: "scheduled" | "done" | "cancelled"
+  - createdAt / updatedAt: timestamp
+
+10. システム構成（案）
+- Backend/Bot：Cloud Run または Cloud Functions（Node.js、discord.js、express）。
+- 定期ジョブ：Cloud Scheduler → Cloud Functions（リマインドチェック、Google 同期）。
+- データ：Firestore（Native）。鍵はサービスアカウント JSON。
+- Web フロント：React/Vue の SPA。Firebase Hosting または Cloud Run + Cloud Storage。
+- 認証：当面は管理者用シンプル認証。将来 Discord OAuth。
+
+11. 処理フロー（概要）
+- 追加（Discord）：入力 → 解析 → 種別判定 → Firestore 保存 → 連携 ON なら Google 登録 → 完了応答。
+- リマインド：Scheduler/Function が Firestore から remindAt 近傍を取得 → Discord 通知 → ステータス更新。
+- Google 同期（将来）：定期的に Calendar/Tasks を取得 → 新規/変更を Firestore に反映 → 必要なら Discord/管理画面通知。
+
+12. 権限とロール（初期）
+- Discord：Bot が Slash Command を受信。サーバー全体表示は管理権限保持者のみ。
+- Web 管理 UI：管理者のみログイン可（将来 Discord OAuth で一般ユーザー閲覧も）。
+
+13. リスク・制約
+- POC のため冗長化/高可用性は未実装。
+- NLP 解析の精度はシンプルな日時パターンに限定。自然言語強化は拡張項目。
+- Google API クォータ制限に注意。
+
+14. 今後の拡張
+- 自然言語日時解析（「明日18時」「来週金曜」など）。
+- Google カレンダー／Tasks 双方向同期。
+- Web からの追加・編集・削除。
+- Slack など他チャネル対応。
+- Gmail API でイベント案内メール。
+
+15. 変更履歴
+- 2025-12-05 初版ドラフト作成（要件定義＋基本設計骨子）
