@@ -1,129 +1,237 @@
-Discord Remind Bot
+📘 README.md（完成版）
+# Discord Remind Bot POC  
+Discord の Slash Command を用いて、以下の流れを実現する Proof of Concept プロジェクトです。
 
-Discord × Web × Google Calendar / ToDo が同期するタスク・イベント管理 Bot
 
 
- 概要
+Discord → Firebase（Firestore）→ Google Calendar
+Discord → Admin Web UI（Firestore参照）
 
-この Bot は、Discord で入力したタスクやイベントを、
-Web 管理画面や Google カレンダー / Google ToDo と自動同期して扱えるシステムです。
 
-ユーザーは Discord に文章を投げるだけで、Bot が予定を解析・登録し、
-必要なときにリマインドを送ってくれます。
+テキストに日時が含まれていれば自動解析し、  
+Firebase に保存後、Google カレンダーと同期する Bot です。
 
- 主な機能
- 1. TODO リストのリマインド
+---
 
-期限付きタスクを追加
+# 🚀 機能一覧
 
-Discord で自然文を解析
-→ タスク名 / 実行日時 / リマインドタイミングを抽出
+| 機能 | 説明 |
+|------|------|
+| `/remind test` | Hello World を返す |
+| `/remind local` | ローカル JSON（remind-local.json）にデータ保存 |
+| `/remind list` | Firebase（remind_logs）から自分のデータ一覧表示 |
+| `/remind firebase text:〇〇` | テキストを保存し、必要なら Google カレンダーに自動登録 |
+| `/remind calendar text:〇〇` | 任意のタイトルで Google カレンダーに予定を作成 |
+| Admin Web UI | http://localhost:3000/reminds で Firebase のデータ一覧確認 |
 
-Google ToDo / Google カレンダーに自動登録
+---
 
-リスト表示・編集・削除
+# 📁 プロジェクト構成
 
-期限前に Discord に通知
+```text
+Discord_bot_POC/
+  src/
+    index.js            # Discord クライアント
+    firebase.js         # Firestore クライアント
+    googleCalendar.js   # Google カレンダー連携
+    adminServer.js      # Firestore 管理用のWebサーバ
+    commands/
+      remind.js         # /remind コマンド本体
+  .env                  # 環境変数（git ignore 必須）
+  firebase-key.json     # サービスアカウント鍵（git ignore 必須）
+  package.json
+  .gitignore
 
-2. イベントリマインド
+🔧 必要環境
 
-日付＋時間のイベントを登録
+Node.js 18+
 
-Google カレンダーに予定として追加
+Discord Bot アプリケーション
 
-イベント開始の○分前 / ○時間前に通知
+Google Cloud Platform（Firestore・Calendar API）
 
-将来的にメール自動生成も対応
+サービスアカウント（JSON鍵）
 
-  アーキテクチャ
-flowchart LR
-  User -->|入力| Discord
-  Discord -->|Webhook/API| CloudRun
-  CloudRun --> Firestore
-  CloudRun --> GoogleCalendar
-  CloudRun --> GoogleTasks
-  Firestore --> WebApp
-  CloudScheduler --> CloudRun
+Google カレンダー（サービスアカウントに共有権限付与）
 
- 使用技術（Tech Stack）
-Backend / Bot
-
-Node.js / TypeScript
-
-Discord.js
-
-Google Calendar API
-
-Google Tasks API
-
-Gmail API（予定）
-
-Cloud Run / Cloud Functions
-
-Frontend
-
-React / Vue（SPA）
-
-Firebase Hosting
-
-Infra
-
-Firestore
-
-Cloud Scheduler
-
- セットアップ
-1. Clone
-git clone https://github.com/yourname/discord-remind-bot.git
-cd discord-remind-bot
-
-2. Install
+📦 インストール
 npm install
 
-3. .env 作成
-DISCORD_TOKEN=xxxx
-GOOGLE_CLIENT_ID=xxxx
-GOOGLE_CLIENT_SECRET=xxxx
-GOOGLE_REDIRECT_URI=xxxx
 
-4. Bot 起動
-npm run dev
+追加で必要なパッケージ：
 
- 使い方
- タスク追加例
-明日の13時に資料作成 30分前に教えて
+npm install discord.js dotenv @google-cloud/firestore googleapis express
+
+🔑 環境変数（.env）
+
+以下を .env に記載：
+
+DISCORD_TOKEN=your-discord-token
+DISCORD_CLIENT_ID=your-discord-client-id
+
+GCP_PROJECT_ID=discord-bot-poc-480206
+GOOGLE_APPLICATION_CREDENTIALS=./firebase-key.json
+
+GCAL_CALENDAR_ID=your-calendar-id
+ADMIN_PORT=3000
 
 
-Bot が以下のように解析：
+■ 注意
+.env、firebase-key.json は 絶対に GitHub に公開しない
+→ .gitignore に必ず追加
 
-項目	内容
-タスク名	資料作成
-実行日時	明日 13:00
-リマインド	30分前
- Web 管理画面でできること
+🔥 Firestore セットアップ
 
-タスク / イベント一覧
+GCP で Firestore Database 作成
 
-ユーザー別 / サーバー別表示
+Firestore API 有効化
 
-追加者・更新情報の確認
+サービスアカウント作成 → JSON鍵をダウンロード
 
-Google 同期状態のチェック
+ダウンロードした鍵を firebase-key.json として配置
 
- 今後の予定
+.env にパスを設定
 
-Google からの双方向同期
+Firestore では remind_logs コレクションを利用します。
 
-Slack 対応
+📅 Google Calendar セットアップ
 
-Web からの編集・追加
+「Google Calendar API」を有効化
 
-イベントメール送信機能
+カレンダーの設定ページで、
+　サービスアカウントのメールアドレスを「共有 → 編集権限」で追加
 
-1./remind testを行うとHello Worldが返る 
-2./remind textを行うと内容をローカルに保存 
-3.ローカルに保存した内容を表示することができる 
-4.ローカル環境からFirebaseに変更できる 
-5.BOTからGCPのカレンダーにデータを送れる 
-6.BOTからFirebaseを経由してカレンダーにデータを送れる 
-7.データの流れをウェブアプリケーションからadminとして確認できる
+カレンダーIDを .env に設定
+
+🧠 Bot のコマンド説明
+/remind test
+
+動作確認用。
+
+返り値：
+
+Hello World
+
+/remind local text:〇〇
+
+ローカルファイル remind-local.json に保存します。
+
+/remind list
+
+Firebase の remind_logs から自分のデータを一覧表示します。
+
+出力例：
+
+1. クリスマスパーティ (2025/12/25 18:00) [ID: abc123]
+
+/remind firebase text:〇〇
+
+主機能。
+
+入力例：
+
+/remind firebase text:2025/12/25 18:00 クリスマスパーティ
+
+
+処理：
+
+テキストを解析（YYYY/MM/DD HH:MM タイトル）
+
+Firestore に保存
+
+カレンダーに同タイトルの予定があるか検索
+
+なければ解析した日時で予定を自動登録
+
+/remind calendar text:〇〇
+
+Google カレンダーに予定を作成します。
+
+🌐 Admin Web UI
+
+管理者向けに Firestore のデータをブラウザで確認できます。
+
+起動
+npm run admin
+
+
+ログ：
+
+Admin server running: http://localhost:3000
+
+リスト表示
+
+ブラウザで開く：
+
+http://localhost:3000/reminds
+
+
+表示内容：
+
+Doc ID
+
+userName / userId
+
+text（元入力）
+
+title（解析後）
+
+startAt（解析日時）
+
+createdAt
+
+🧪 テキストの日時自動解析仕様（POC）
+
+以下形式を自動判定：
+
+YYYY/MM/DD HH:MM タイトル
+例）2025/12/25 18:00 クリスマスパーティ
+
+
+解析できない場合は：
+
+title = rawText
+
+startAt = null
+
+カレンダー作成時は「今から5分後」をデフォルト開始
+
+🧹 .gitignore（推奨）
+node_modules/
+.env
+firebase-key.json
+remind-local.json
+
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+👨‍💻 開発に役立つコマンド
+Slash コマンド更新
+node deploy-commands.js
+
+Bot 起動
+npm start
+
+Admin UI 起動
+npm run admin
+
+🎉 この POC で実現できたこと
+項目	達成状況
+Discord Bot の基本動作	✔ 完了
+ローカル → Firebase への移行	✔ 完了
+Firebase からの一覧表示	✔ 完了
+Google Calendar 直接連携	✔ 完了
+Firebase データ → カレンダー自動同期	✔ 完了
+周辺情報（日時解析）	✔ 完了
+Web 管理画面（admin UI）	✔ 完了
+🤝 今後の発展
+
+日時解析の強化（自然言語対応など）
+
+Google Calendar の二重登録チェックを日時ベースに拡張
+
+Next.js / Firebase Hosting による本格Web管理画面
+
+リマインダー通知機能の追加（Cloud Functions 等）
