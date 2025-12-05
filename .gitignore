@@ -1,49 +1,237 @@
-# ======================
-# Node.js 基本
-# ======================
+📘 README.md（完成版）
+# Discord Remind Bot POC  
+Discord の Slash Command を用いて、以下の流れを実現する Proof of Concept プロジェクトです。
+
+
+
+Discord → Firebase（Firestore）→ Google Calendar
+Discord → Admin Web UI（Firestore参照）
+
+
+テキストに日時が含まれていれば自動解析し、  
+Firebase に保存後、Google カレンダーと同期する Bot です。
+
+---
+
+# 🚀 機能一覧
+
+| 機能 | 説明 |
+|------|------|
+| `/remind test` | Hello World を返す |
+| `/remind local` | ローカル JSON（remind-local.json）にデータ保存 |
+| `/remind list` | Firebase（remind_logs）から自分のデータ一覧表示 |
+| `/remind firebase text:〇〇` | テキストを保存し、必要なら Google カレンダーに自動登録 |
+| `/remind calendar text:〇〇` | 任意のタイトルで Google カレンダーに予定を作成 |
+| Admin Web UI | http://localhost:3000/reminds で Firebase のデータ一覧確認 |
+
+---
+
+# 📁 プロジェクト構成
+
+```text
+Discord_bot_POC/
+  src/
+    index.js            # Discord クライアント
+    firebase.js         # Firestore クライアント
+    googleCalendar.js   # Google カレンダー連携
+    adminServer.js      # Firestore 管理用のWebサーバ
+    commands/
+      remind.js         # /remind コマンド本体
+  .env                  # 環境変数（git ignore 必須）
+  firebase-key.json     # サービスアカウント鍵（git ignore 必須）
+  package.json
+  .gitignore
+
+🔧 必要環境
+
+Node.js 18+
+
+Discord Bot アプリケーション
+
+Google Cloud Platform（Firestore・Calendar API）
+
+サービスアカウント（JSON鍵）
+
+Google カレンダー（サービスアカウントに共有権限付与）
+
+📦 インストール
+npm install
+
+
+追加で必要なパッケージ：
+
+npm install discord.js dotenv @google-cloud/firestore googleapis express
+
+🔑 環境変数（.env）
+
+以下を .env に記載：
+
+DISCORD_TOKEN=your-discord-token
+DISCORD_CLIENT_ID=your-discord-client-id
+
+GCP_PROJECT_ID=discord-bot-poc-480206
+GOOGLE_APPLICATION_CREDENTIALS=./firebase-key.json
+
+GCAL_CALENDAR_ID=your-calendar-id
+ADMIN_PORT=3000
+
+
+■ 注意
+.env、firebase-key.json は 絶対に GitHub に公開しない
+→ .gitignore に必ず追加
+
+🔥 Firestore セットアップ
+
+GCP で Firestore Database 作成
+
+Firestore API 有効化
+
+サービスアカウント作成 → JSON鍵をダウンロード
+
+ダウンロードした鍵を firebase-key.json として配置
+
+.env にパスを設定
+
+Firestore では remind_logs コレクションを利用します。
+
+📅 Google Calendar セットアップ
+
+「Google Calendar API」を有効化
+
+カレンダーの設定ページで、
+　サービスアカウントのメールアドレスを「共有 → 編集権限」で追加
+
+カレンダーIDを .env に設定
+
+🧠 Bot のコマンド説明
+/remind test
+
+動作確認用。
+
+返り値：
+
+Hello World
+
+/remind local text:〇〇
+
+ローカルファイル remind-local.json に保存します。
+
+/remind list
+
+Firebase の remind_logs から自分のデータを一覧表示します。
+
+出力例：
+
+1. クリスマスパーティ (2025/12/25 18:00) [ID: abc123]
+
+/remind firebase text:〇〇
+
+主機能。
+
+入力例：
+
+/remind firebase text:2025/12/25 18:00 クリスマスパーティ
+
+
+処理：
+
+テキストを解析（YYYY/MM/DD HH:MM タイトル）
+
+Firestore に保存
+
+カレンダーに同タイトルの予定があるか検索
+
+なければ解析した日時で予定を自動登録
+
+/remind calendar text:〇〇
+
+Google カレンダーに予定を作成します。
+
+🌐 Admin Web UI
+
+管理者向けに Firestore のデータをブラウザで確認できます。
+
+起動
+npm run admin
+
+
+ログ：
+
+Admin server running: http://localhost:3000
+
+リスト表示
+
+ブラウザで開く：
+
+http://localhost:3000/reminds
+
+
+表示内容：
+
+Doc ID
+
+userName / userId
+
+text（元入力）
+
+title（解析後）
+
+startAt（解析日時）
+
+createdAt
+
+🧪 テキストの日時自動解析仕様（POC）
+
+以下形式を自動判定：
+
+YYYY/MM/DD HH:MM タイトル
+例）2025/12/25 18:00 クリスマスパーティ
+
+
+解析できない場合は：
+
+title = rawText
+
+startAt = null
+
+カレンダー作成時は「今から5分後」をデフォルト開始
+
+🧹 .gitignore（推奨）
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-dist/
-build/
-
-# ======================
-# 環境変数ファイル
-# （絶対に公開してはいけない）
-# ======================
 .env
-*.env
-
-# ======================
-# Firebase / Google Cloud 認証鍵
-# （最重要：これが漏れると誰でもあなたのGCPを操作できる）
-# ======================
 firebase-key.json
-service-account.json
-*.key.json
-*.secret.json
-
-# ======================
-# ローカル用データファイル
-# ======================
 remind-local.json
-*.sqlite
-*.db
 
-# ======================
-# OS / エディタのゴミファイル
-# ======================
+*.log
 .DS_Store
-Thumbs.db
 .vscode/
 .idea/
 
-# ======================
-# Git が扱わなくてよい一時ファイル
-# ======================
-*.log
-logs/
-*.tmp
-tmp/
+👨‍💻 開発に役立つコマンド
+Slash コマンド更新
+node deploy-commands.js
+
+Bot 起動
+npm start
+
+Admin UI 起動
+npm run admin
+
+🎉 この POC で実現できたこと
+項目	達成状況
+Discord Bot の基本動作	✔ 完了
+ローカル → Firebase への移行	✔ 完了
+Firebase からの一覧表示	✔ 完了
+Google Calendar 直接連携	✔ 完了
+Firebase データ → カレンダー自動同期	✔ 完了
+周辺情報（日時解析）	✔ 完了
+Web 管理画面（admin UI）	✔ 完了
+🤝 今後の発展
+
+日時解析の強化（自然言語対応など）
+
+Google Calendar の二重登録チェックを日時ベースに拡張
+
+Next.js / Firebase Hosting による本格Web管理画面
+
+リマインダー通知機能の追加（Cloud Functions 等）
