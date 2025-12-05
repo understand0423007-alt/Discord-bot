@@ -1,0 +1,23 @@
+{
+    "name": "discord-bot-poc",
+    "version": "1.0.0",
+    "description": "",
+    "license": "ISC",
+    "author": "",
+    "type": "module",
+    "main": "src/index.js",
+    
+    "scripts": {
+        "start": "node src/index.js",
+        "deploy": "node deploy-commands.js",
+        "admin": "node src/adminServer.js"
+    },
+    
+    "dependencies": {
+        "discord.js": "^14.16.3",
+        "dotenv": "^16.0.0",
+        "express": "^5.2.1",
+        "firebase": "^12.6.0",
+        "googleapis": "^167.0.0"
+    }
+}
