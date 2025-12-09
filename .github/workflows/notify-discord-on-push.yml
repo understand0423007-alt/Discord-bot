@@ -1,0 +1,27 @@
+name: Notify Discord on Push
+
+on:
+  push:
+    branches:
+      - main   # 必要なら他のブランチ名に変更 (例: master, develop など)
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send message to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          branch="${GITHUB_REF##*/}"
+          actor="${GITHUB_ACTOR}"
+          repo="${GITHUB_REPOSITORY}"
+
+          content="🔔 GitHub に Push がありました！ (repo: $repo, branch: $branch, actor: $actor)"
+
+          json="{\"content\": \"$content\"}"
+
+          curl -H "Content-Type: application/json" \
+            -d "$json" \
+            "$DISCORD_WEBHOOK_URL"
