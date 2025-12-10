@@ -1,29 +1,21 @@
 import "dotenv/config";
 import { Client, GatewayIntentBits, Events } from "discord.js";
-import remindCommand from "./commands/remind.js";
+import { startCalendarWatcher } from "./google-calendar.js"; // ← 追加
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-// Bot準備OK
-client.once(Events.ClientReady, (c) => {
-    console.log(`Logged in as ${c.user.tag}`);
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
 });
 
-// Slashコマンドが呼ばれたとき
-client.on(Events.InteractionCreate, async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+client.once(Events.ClientReady, (c) => {
+    console.log(`ログインしました: ${c.user.tag}`);
 
-    // ここで受け取ったコマンドをログに出す
-    console.log(
-        `Interaction received: /${interaction.commandName}${
-            interaction.options.getSubcommand
-            ? " " + interaction.options.getSubcommand()
-            : ""
-        }`
-    );
-
-    if (interaction.commandName === "remind")
-        await remindCommand.execute(interaction);
+    // --- ここでカレンダー監視をスタート ---
+    startCalendarWatcher(client);
+    console.log("Google カレンダー監視を開始しました。");
 });
 
 client.login(process.env.DISCORD_TOKEN);

@@ -1,18 +1,14 @@
 {
     "name": "discord-bot-poc",
     "version": "1.0.0",
-    "description": "",
-    "license": "ISC",
-    "author": "",
     "type": "module",
     "main": "src/index.js",
-    
     "scripts": {
         "start": "node src/index.js",
         "deploy": "node deploy-commands.js",
-        "admin": "node src/adminServer.js"
+        "admin": "node src/adminServer.js",
+        "calendar:daily": "node scripts/calendar-notify.js daily"
     },
-    
     "dependencies": {
         "discord.js": "^14.16.3",
         "dotenv": "^16.0.0",
