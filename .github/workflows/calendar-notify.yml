@@ -2,9 +2,9 @@ name: Calendar notify to Discord
 
 on:
   schedule:
-    # 毎朝 7:00 (JST) に実行 → UTC だと 22:00 の前日
-    - cron: "0 22 * * *"
-
+    # JST 7:00 に実行したい場合 → UTC 22:00（前日）
+    # とりあえずテストなら 5分おきでもOK: "*/5 * * * *"
+    - cron: "*/5 * * * *"
   # 手動実行したいとき用（Actions 画面から Run workflow できる）
   workflow_dispatch:
 
