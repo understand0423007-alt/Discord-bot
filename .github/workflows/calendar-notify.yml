@@ -2,10 +2,7 @@ name: Calendar notify to Discord
 
 on:
   schedule:
-    # JST 7:00 に実行したい場合 → UTC 22:00（前日）
-    # とりあえずテストなら 5分おきでもOK: "*/5 * * * *"
-    - cron: "*/5 * * * *"
-  # 手動実行したいとき用（Actions 画面から Run workflow できる）
+    - cron: "*/5 * * * *"   # 5分おき実行（テスト用）
   workflow_dispatch:
 
 jobs:
@@ -29,4 +26,3 @@ jobs:
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
